@@ -1,0 +1,40 @@
+# Binaries
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Coverage and test output
+cover.out
+coverage.html
+*.out
+
+# Go
+vendor/
+go.work
+go.work.sum
+
+# Task
+.task/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Local drafts, not part of the product
+blog/

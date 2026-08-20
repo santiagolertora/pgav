@@ -1,0 +1,42 @@
+postgres:
+  dsn: ""
+  application_name: pgav
+  connect_timeout: 5s
+  query_timeout: 15s
+
+log:
+  level: warn
+  format: text
+
+assess:
+  high_dead_ratio: 0.20
+  critical_dead_ratio: 0.40
+  high_hours_to_trigger: 8
+  wraparound_warning_ratio: 0.80
+  wraparound_critical_ratio: 0.95
+  assumed_cost_per_page: 10
+  assumed_tuples_per_page: 50
+  io_multiplier: 1
+  min_trigger_for_scale_warning: 1000000
+
+tuner:
+  max_hours_between_vacuum: 4
+  min_scale_factor: 0.001
+  max_scale_factor: 0.20
+  min_threshold: 10000
+  max_threshold: 100000
+  cost_limit_bump: 1800
+  min_cost_limit: 200
+  max_cost_limit: 10000
+  cost_limit_headroom: 1.25
+  scale_decimals: 3
+
+doctor:
+  max_score: 100
+  min_score: 0
+  critical_penalty: 15
+  high_penalty: 8
+  warning_penalty: 3
+  long_xact_penalty: 5
+  wraparound_penalty: 20
+  long_xact_after: 1h

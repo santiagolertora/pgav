@@ -1,0 +1,7 @@
+.git
+.task
+dist
+cover.out
+coverage.html
+*.out
+**/.DS_Store

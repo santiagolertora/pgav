@@ -1,0 +1,6 @@
+threshold: 80
+packages:
+  - ./internal/domain
+  - ./internal/app
+  - ./internal/config
+  - ./internal/observability

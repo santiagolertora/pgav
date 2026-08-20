@@ -1,0 +1,98 @@
+version: "3"
+
+vars:
+  GO_VERSION: "1.25.0"
+  BINARY: pgav
+  DIST: dist
+  VERSION:
+    sh: git describe --tags --always --dirty 2>/dev/null || echo dev
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  tidy:
+    desc: Tidy modules and fail if go.mod/go.sum would change
+    cmds:
+      - go mod tidy
+      - git diff --exit-code go.mod go.sum
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run ./...
+
+  test:
+    desc: Run unit tests with the race detector
+    cmds:
+      - go test -race -count=1 ./...
+
+  test:integration:
+    desc: Run integration tests (requires Docker)
+    cmds:
+      - go test -race -count=1 -tags=integration ./...
+
+  cover:
+    desc: Enforce coverage threshold on internal packages
+    cmds:
+      - bash build/ci/coverage.sh
+
+  build:
+    desc: Build a stripped binary into dist/
+    cmds:
+      - mkdir -p {{.DIST}}
+      - go build -trimpath -ldflags="-s -w -X main.version={{.VERSION}}" -o {{.DIST}}/{{.BINARY}} ./cmd/pgav
+
+  lab:
+    desc: Build image pgav-docker and start Postgres plus autovacuum traffic
+    cmds:
+      - docker compose up --build -d
+      - 'echo "Lab is up. Wait ~20s for seed, then run: task lab:status"'
+
+  lab:status:
+    desc: Run pgav status against the lab
+    cmds:
+      - docker compose exec traffic /pgav status
+
+  lab:analyze:
+    desc: Run pgav analyze on the throttled sessions table
+    cmds:
+      - docker compose exec traffic /pgav analyze public.sessions
+
+  lab:doctor:
+    desc: Run pgav doctor against the lab
+    cmds:
+      - docker compose exec traffic /pgav doctor
+
+  lab:tune:
+    desc: Dry-run pgav tune against the lab
+    cmds:
+      - docker compose exec traffic /pgav tune
+
+  lab:logs:
+    desc: Follow pgav-docker traffic logs
+    cmds:
+      - docker compose logs -f traffic
+
+  lab:down:
+    desc: Stop the lab and delete volumes
+    cmds:
+      - docker compose down -v
+
+  lab:reset:
+    desc: Wipe Postgres state and start a clean lab
+    cmds:
+      - docker compose down -v
+      - docker compose up --build -d
+      - 'echo "Clean lab is up. Wait ~20s for seed, then run: task lab:doctor"'
+
+  ci:
+    desc: Full CI gate
+    cmds:
+      - task: lint
+      - task: test
+      - task: test:integration
+      - task: cover
+      - task: tidy

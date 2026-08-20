@@ -1,0 +1,64 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - revive
+    - gosec
+    - gocritic
+    - unparam
+    - unused
+    - ineffassign
+    - bodyclose
+    - contextcheck
+    - errorlint
+    - nilerr
+    - noctx
+    - prealloc
+    - nolintlint
+    - forbidigo
+    - wrapcheck
+  settings:
+    forbidigo:
+      forbid:
+        - pattern: ^fmt\.Print(ln|f)?$
+          pkg: github.com/santiagolertora/pgav/internal/.*
+    wrapcheck:
+      ignore-package-globs:
+        - github.com/santiagolertora/pgav/internal/domain/*
+        - github.com/santiagolertora/pgav/internal/app/*
+        - github.com/santiagolertora/pgav/internal/config/*
+        - github.com/santiagolertora/pgav/internal/observability/*
+    revive:
+      rules:
+        - name: exported
+          disabled: false
+        - name: package-comments
+          disabled: false
+  exclusions:
+    generated: lax
+    rules:
+      - path: cmd/
+        linters:
+          - forbidigo
+          - wrapcheck
+      - path: _test\.go
+        linters:
+          - gosec
+          - wrapcheck
+          - forbidigo
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/santiagolertora/pgav

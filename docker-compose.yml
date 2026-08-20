@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pgav
+      POSTGRES_PASSWORD: pgav
+      POSTGRES_DB: pgav
+    ports:
+      - "5433:5432"
+    command:
+      - postgres
+      - -c
+      - autovacuum=on
+      - -c
+      - autovacuum_naptime=1s
+      - -c
+      - log_autovacuum_min_duration=0
+      - -c
+      - tcp_keepalives_idle=20
+      - -c
+      - tcp_keepalives_interval=5
+      - -c
+      - tcp_keepalives_count=3
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pgav -d pgav"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  traffic:
+    image: pgav-docker
+    build:
+      context: .
+      dockerfile: docker/pgav-docker/Dockerfile
+      args:
+        VERSION: lab
+    environment:
+      PGAV_DSN: postgres://pgav:pgav@postgres:5432/pgav?sslmode=disable
+      PGAV_LOG_LEVEL: warn
+      PGAV_LAB_LOG_LEVEL: info
+      PGAV_LONG_XACT_AFTER: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
