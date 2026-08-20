@@ -1,0 +1,116 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GO_VERSION: "1.25.0"
+
+jobs:
+  binaries:
+    name: ${{ matrix.distro }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu
+            image: ubuntu:24.04
+          - distro: debian
+            image: debian:bookworm
+          - distro: rockylinux
+            image: rockylinux:9
+          - distro: alpine
+            image: alpine:3.21
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - name: Install build tools
+        run: |
+          set -eux
+          case "${{ matrix.distro }}" in
+            ubuntu|debian)
+              apt-get update
+              apt-get install -y --no-install-recommends ca-certificates curl git tar gzip
+              ;;
+            rockylinux)
+              dnf install -y ca-certificates curl git tar gzip
+              ;;
+            alpine)
+              apk add --no-cache ca-certificates curl git tar gzip
+              ;;
+          esac
+
+      - uses: actions/checkout@v4
+
+      - name: Install Go
+        run: |
+          set -eux
+          curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tgz
+          rm -rf /usr/local/go
+          tar -C /usr/local -xzf /tmp/go.tgz
+          echo "/usr/local/go/bin" >> "$GITHUB_PATH"
+          /usr/local/go/bin/go version
+
+      - name: Build
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          set -eux
+          version="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            version="$(git rev-parse --short HEAD)"
+          fi
+          mkdir -p dist
+          out="dist/pgav-${{ matrix.distro }}-amd64"
+          go build -trimpath \
+            -ldflags="-s -w -X main.version=${version}" \
+            -o "${out}" ./cmd/pgav
+          "${out}" version
+          # static binary; works on glibc and musl hosts
+          file "${out}" || true
+          sha256sum "${out}" | tee "${out}.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pgav-${{ matrix.distro }}-amd64
+          path: |
+            dist/pgav-${{ matrix.distro }}-amd64
+            dist/pgav-${{ matrix.distro }}-amd64.sha256
+          if-no-files-found: error
+
+  publish:
+    needs: binaries
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Pack checksums
+        run: |
+          set -eux
+          cd dist
+          ls -la
+          cat *.sha256 | sort > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/pgav-ubuntu-amd64
+            dist/pgav-debian-amd64
+            dist/pgav-rockylinux-amd64
+            dist/pgav-alpine-amd64
+            dist/SHA256SUMS
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

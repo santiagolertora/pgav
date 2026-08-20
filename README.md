@@ -181,6 +181,9 @@ task build          # or: go build -o dist/pgav ./cmd/pgav
 ./dist/pgav version
 ```
 
+Tagged releases also ship static `linux/amd64` binaries for Ubuntu, Debian,
+Rocky Linux, and Alpine (GitHub Actions → Releases).
+
 `task test` runs unit tests with the race detector. `task test:integration`
 needs Docker.
 
