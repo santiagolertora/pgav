@@ -1,7 +1,7 @@
 version: "3"
 
 vars:
-  GO_VERSION: "1.25.0"
+  GO_VERSION: "1.25.13"
   BINARY: pgav
   DIST: dist
   VERSION:
